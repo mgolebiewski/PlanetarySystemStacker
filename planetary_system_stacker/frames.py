@@ -27,6 +27,7 @@ from os.path import splitext
 from pathlib import Path
 from time import time
 
+import rawpy
 from PyQt5 import QtCore
 from astropy.io import fits
 from cv2 import imread, VideoCapture, CAP_PROP_FRAME_COUNT, cvtColor, COLOR_RGB2GRAY, \
@@ -1760,6 +1761,27 @@ class Frames(object):
                 image = cvtColor(input_image, COLOR_BGR2RGB)
             else:
                 image = input_image
+
+        # Case Canon .cr3 raw format
+        elif suffix in ('.cr3',):
+            """
+            washed out and noisy by default
+            
+            bkg wash out helped, objects burnt, noisy still
+            use_camera_wb=True,output_color=rawpy.ColorSpace(1),output_bps=8,four_color_rgb=True,gamma=(1.0/2.4,12.92)
+            
+            getting there but jupiter still burnt out
+            use_camera_wb=True,output_color=rawpy.ColorSpace(1),output_bps=8,four_color_rgb=True,gamma=(1.0/2.4,12.92),exp_shift=0.25,highlight_mode=2
+            
+            less burn, smaller objects dissapeared
+            use_camera_wb=True,output_color=rawpy.ColorSpace(1),output_bps=8,four_color_rgb=True,gamma=(1.0/2.4,12.92),exp_shift=0.25,highlight_mode=2,noise_thr=0.5,bright=0.1
+            
+            so far the best, using wb and black level from RawPy object
+            use_camera_wb=True,output_color=rawpy.ColorSpace(1),output_bps=8,four_color_rgb=True,gamma=(1.0/2.4,12.92),exp_shift=0.25,highlight_mode=2,noise_thr=0.25,bright=0.075,user_sat=13660,user_black=2048
+            """
+            raw_image = rawpy.imread(filename)
+            image = raw_image.postprocess()
+            raw_image.close()
 
         else:
             raise TypeError("Attempt to read image format other than 'tiff', 'tif',"
